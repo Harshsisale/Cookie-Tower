@@ -56,5 +56,5 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "Cookie Tower.sln"
+    "dotnet.defaultSolution": "Cookie-Tower.sln"
 }
