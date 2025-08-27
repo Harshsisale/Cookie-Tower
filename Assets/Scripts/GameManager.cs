@@ -1,97 +1,90 @@
 using System.Collections;
 using UnityEngine;
 
-public class GameManager : MonoBehaviour
-{
-        [SerializeField] private Transform blockPrefab;
-        [SerializeField] private Transform blockHolder;
+public class GameManager : MonoBehaviour {
+  [SerializeField] private Transform blockPrefab;
+  [SerializeField] private Transform blockHolder;
 
-        [SerializeField] private TMPro.TextMeshProUGUI livesText;
+  [SerializeField] private TMPro.TextMeshProUGUI livesText;
 
-        [SerializeField] private Sprite[] cookieSprites;
+  private Transform currentBlock = null;
+  private Rigidbody2D currentRigidbody;
 
-        private Transform currentBlock = null;
-        private Rigidbody2D currentRigidbody;
-        private Vector2 blockStartPosition = new Vector2(0f, 4f);
+  private Vector2 blockStartPosition = new Vector2(0f, 4f);
 
-        private float blockSpeed = 8f;
-        private float blockSpeedIncrement = 0.3f;
-        private int blockDirection = 1; // 1 for right, -1 for left
-        private float xLimit = 5;
-        private float timeBetweenRounds = 0.5f;
+  private float blockSpeed = 8f;
+  private float blockSpeedIncrement = 0.5f;
+  private int blockDirection = 1;
+  private float xLimit = 5;
 
-        private int startingLives = 3;
-        private int livesRemaining;
-        private bool playing = true;
+  private float timeBetweenRounds = 1f;
 
-        void Start()
-        {
-                livesRemaining = startingLives;
-                livesText.text = "Lives: " + livesRemaining;
-                SpawnNewBlock();
-        }
+  // Variables to handle the game state.
+  private int startingLives = 3;
+  private int livesRemaining;
+  private bool playing = true;
 
-        private void SpawnNewBlock()
-        {
-                float randomX = Random.Range(-xLimit, xLimit);
-                Vector2 spawnPosition = new Vector2(randomX, blockStartPosition.y);
-                currentBlock = Instantiate(blockPrefab, blockHolder);
-                currentBlock.position = spawnPosition;
-                currentRigidbody = currentBlock.GetComponentInChildren<Rigidbody2D>();
+  // Start is called before the first frame update
+  void Start() {
+    livesRemaining = startingLives;
+    livesText.text = $"{livesRemaining}";
+    SpawnNewBlock();
+  }
 
-                // Assign a random cookie sprite
-                SpriteRenderer sr = currentBlock.GetComponentInChildren<SpriteRenderer>();
-                if (sr != null && cookieSprites.Length > 0)
-                {
-                        sr.sprite = cookieSprites[Random.Range(0, cookieSprites.Length)];
-                }
+  private void SpawnNewBlock() {
+    // Create a block with the desired properties.
+    currentBlock = Instantiate(blockPrefab, blockHolder);
+    currentBlock.position = blockStartPosition;
+    currentBlock.GetComponent<SpriteRenderer>().color = Random.ColorHSV();
+    currentRigidbody = currentBlock.GetComponent<Rigidbody2D>();
+    // Increase the block speed each time to make it harder.
+    blockSpeed += blockSpeedIncrement;
+  }
 
-                blockSpeed += blockSpeedIncrement;
-        }
+  private IEnumerator DelayedSpawn() {
+    yield return new WaitForSeconds(timeBetweenRounds);
+    SpawnNewBlock();
 
-        private IEnumerator DelayedSpawn()
-        {
-                yield return new WaitForSeconds(timeBetweenRounds);
-                SpawnNewBlock();
-        }
+  }
 
+  // Update is called once per frame
+  void Update() {
+    // If we have a waiting block, move it about.
+    if (currentBlock && playing) {
+      float moveAmount = Time.deltaTime * blockSpeed * blockDirection;
+      currentBlock.position += new Vector3(moveAmount, 0, 0);
+      // If we've gone as far as we want, reverse direction.
+      if (Mathf.Abs(currentBlock.position.x) > xLimit) {
+        // Set it to the limit so it doesn't go further.
+        currentBlock.position = new Vector3(blockDirection * xLimit, currentBlock.position.y, 0);
+        blockDirection = -blockDirection;
+      }
 
-        void Update()
-        {
-                if (currentBlock && playing)
-                {
-                        float moveAmount = Time.deltaTime * blockSpeed * blockDirection;
-                        currentBlock.position += new Vector3(moveAmount, 0, 0);
-                        if (Mathf.Abs(currentBlock.position.x) > xLimit)
-                        {
-                                currentBlock.position = new Vector3(blockDirection * xLimit, currentBlock.position.y, 0);
-                                blockDirection *= -1;
-                        }
-                }
-                if (Input.GetKeyDown(KeyCode.Space) && currentBlock && playing)
-                {
-                        currentBlock = null;
-                        if (currentRigidbody != null)
-                                currentRigidbody.simulated = true;
-                        StartCoroutine(DelayedSpawn());
-                }
+      // If we press space drop the block.
+      if (Input.GetKeyDown(KeyCode.Space)) {
+        // Stop it moving.
+        currentBlock = null;
+        // Activate the RigidBody to enable gravity to drop it.
+        currentRigidbody.simulated = true;
+        // Spawn the next block.
+        StartCoroutine(DelayedSpawn());
+      }
+    }
 
-                if (Input.GetKeyDown(KeyCode.R))
-                {
-                        UnityEngine.SceneManagement.SceneManager.LoadScene(0);
-                }
-        }
+    // Temporarily assign a key to restart the game.
+    if (Input.GetKeyDown(KeyCode.Escape)) {
+      UnityEngine.SceneManagement.SceneManager.LoadScene(0);
+    }
+  }
 
-        public void RemoveLife()
-        {
-                livesRemaining = Mathf.Max(livesRemaining - 1, 0);
-                livesText.text = "Lives: " + livesRemaining;
-                if (livesRemaining <= 0)
-                {
-                        playing = false;
-                        livesText.text = "Game Over! Press R to Restart";
-                }
-        }
-
-
+  // Called from LoseLife whenever it detects a block has fallen off.
+  public void RemoveLife() {
+    // Update the lives remaining UI element.
+    livesRemaining = Mathf.Max(livesRemaining - 1, 0);
+    livesText.text = $"{livesRemaining}";
+    // Check for end of game.
+    if (livesRemaining == 0) {
+      playing = false;
+    }
+  }
 }
