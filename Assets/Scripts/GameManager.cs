@@ -8,6 +8,8 @@ public class GameManager : MonoBehaviour
 
         [SerializeField] private TMPro.TextMeshProUGUI livesText;
 
+        [SerializeField] private Sprite[] cookieSprites;
+
         private Transform currentBlock = null;
         private Rigidbody2D currentRigidbody;
         private Vector2 blockStartPosition = new Vector2(0f, 4f);
@@ -35,7 +37,15 @@ public class GameManager : MonoBehaviour
                 Vector2 spawnPosition = new Vector2(randomX, blockStartPosition.y);
                 currentBlock = Instantiate(blockPrefab, blockHolder);
                 currentBlock.position = spawnPosition;
-                currentRigidbody = currentBlock.GetComponent<Rigidbody2D>();
+                currentRigidbody = currentBlock.GetComponentInChildren<Rigidbody2D>();
+
+                // Assign a random cookie sprite
+                SpriteRenderer sr = currentBlock.GetComponentInChildren<SpriteRenderer>();
+                if (sr != null && cookieSprites.Length > 0)
+                {
+                        sr.sprite = cookieSprites[Random.Range(0, cookieSprites.Length)];
+                }
+
                 blockSpeed += blockSpeedIncrement;
         }
 
@@ -61,7 +71,8 @@ public class GameManager : MonoBehaviour
                 if (Input.GetKeyDown(KeyCode.Space) && currentBlock && playing)
                 {
                         currentBlock = null;
-                        currentRigidbody.simulated = true;
+                        if (currentRigidbody != null)
+                                currentRigidbody.simulated = true;
                         StartCoroutine(DelayedSpawn());
                 }
 
